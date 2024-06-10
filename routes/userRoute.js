@@ -23,8 +23,8 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/logout", isAuthenticatedUser, logoutUser);
-router.post("/password/forgot", forgotPassword);
-router.put("/password/reset/:resetToken", resetPassword);
+router.post('/password/forgot', forgotPassword);
+router.put('/password/reset/:resetToken', resetPassword);
 
 // User Profile Routes
 router.route("/profile")

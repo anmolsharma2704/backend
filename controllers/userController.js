@@ -3,6 +3,8 @@ import ErrorHander from "../utils/errorhander.js";
 import catchAsyncErrors from "../middleware/catchAsyncErrors.js";
 import sendToken from "../utils/jwtToken.js";
 import sendEmail from "../utils/sendEmail.js";
+import crypto from 'crypto';
+
 
 // Register a User
 export const registerUser = catchAsyncErrors(async (req, res, next) => {
@@ -64,7 +66,6 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
 
 // Forgot Password
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
-  // Forgot password logic here
   const user = await User.findOne({ email: req.body.email });
 
   if (!user) {
@@ -78,14 +79,14 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
   const resetPasswordUrl = `${req.protocol}://${req.get(
     "host"
-  )}/password/reset/${resetToken}`;
+  )}api/v1/password/reset/${resetToken}`;
 
-  const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\nIf you have not requested this email then, please ignore it.`;
+  const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\nIf you have not requested this email, please ignore it.`;
 
   try {
     await sendEmail({
       email: user.email,
-      subject: `Lanakree Password Recovery`,
+      subject: `Password Recovery`,
       message,
     });
 
@@ -99,18 +100,16 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    return next(new ErrorHander(error.message, 500));
+    return next(new ErrorHander("Email could not be sent", 500));
   }
 });
 
 // Reset Password
 export const resetPassword = catchAsyncErrors(async (req, res, next) => {
-  // Reset password logic here
-  // creating token hash
   const resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
+    .createHash('sha256')
+    .update(req.params.resetToken)
+    .digest('hex');
 
   const user = await User.findOne({
     resetPasswordToken,
@@ -118,16 +117,11 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
   });
 
   if (!user) {
-    return next(
-      new ErrorHander(
-        "Reset Password Token is invalid or has been expired",
-        400
-      )
-    );
+    return next(new ErrorHander('Reset Password Token is invalid or has expired', 400));
   }
 
   if (req.body.password !== req.body.confirmPassword) {
-    return next(new ErrorHander("Password does not password", 400));
+    return next(new ErrorHander('Passwords do not match', 400));
   }
 
   user.password = req.body.password;
@@ -138,7 +132,6 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
 
   sendToken(user, 200, res);
 });
-
 // Get User Detail
 export const getUserDetails = catchAsyncErrors(async (req, res, next) => {
   // Get user details logic here

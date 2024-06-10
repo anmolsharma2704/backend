@@ -34,7 +34,7 @@ app.use('/api/v1', payment);
 
 // Using routes
 app.get('/', (req, res) => {
-  res.send('Nice working');
+  res.send(process.env.COMPANY_NAME);
 });
 
 // Using Error Middleware

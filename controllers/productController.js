@@ -26,23 +26,27 @@ export const createProduct = catchAsyncErrors(async (req, res, next) => {
     product,
   });
 });
-
 // Get All Product
 export const getAllProducts = catchAsyncErrors(async (req, res, next) => {
   const resultPerPage = 8;
   const productsCount = await Product.countDocuments();
 
+  // Initialize apiFeature with search and filter
   const apiFeature = new ApiFeatures(Product.find(), req.query)
     .search()
     .filter();
 
+  // Execute the search and filter query to get initial products
   let products = await apiFeature.query;
 
+  // Get filtered products count before pagination
   let filteredProductsCount = products.length;
 
+  // Apply pagination on the initial filtered results
   apiFeature.pagination(resultPerPage);
 
-  products = await apiFeature.query;
+  // Execute the paginated query to get the final products
+  products = await apiFeature.query.clone();
 
   res.status(200).json({
     success: true,

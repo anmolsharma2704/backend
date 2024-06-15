@@ -10,19 +10,22 @@ import crypto from 'crypto';
 export const registerUser = catchAsyncErrors(async (req, res, next) => {
   const { name, email, password, avatar } = req.body;
 
-  // Convert avatar image to base64 string
-  const avatarBase64 = avatar.toString('base64');
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-    avatar: avatarBase64,
-  });
 
-  sendToken(user, 201, res);
+  try {
+      const user = await User.create({
+      name,
+      email,
+      password,
+      avatar,
+    });
+
+    sendToken(user, 201, res);
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
-
 // Login User
 export const loginUser = catchAsyncErrors(async (req, res, next) => {
   const { email, password } = req.body;
@@ -67,6 +70,7 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
 // Forgot Password
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
+  const baseURL = req.body.baseURL;
 
   if (!user) {
     return next(new ErrorHander("User not found", 404));
@@ -77,16 +81,14 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const resetPasswordUrl = `${req.protocol}://${req.get(
-    "host"
-  )}api/v1/password/reset/${resetToken}`;
+  const resetPasswordUrl = `${baseURL}/password/reset/${resetToken}`;
 
-  const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\nIf you have not requested this email, please ignore it.`;
+  const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\nValid till 15 min\n\nIf you have not requested this email, please ignore it.`;
 
   try {
     await sendEmail({
       email: user.email,
-      subject: `Password Recovery`,
+      subject: `Password Recovery for ${process.env.COMPANY_NAME}`,
       message,
     });
 
@@ -105,43 +107,44 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 });
 
 // Reset Password
-export const resetPassword = catchAsyncErrors(async (req, res, next) => {
+
+export const resetPassword = async (req, res, next) => {
+  const { resetToken,password} = req.body;
+
+
+  if (!resetToken || !password ) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
   const resetPasswordToken = crypto
     .createHash('sha256')
-    .update(req.params.resetToken)
+    .update(resetToken)
     .digest('hex');
 
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+  try {
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
 
-  if (!user) {
-    return next(new ErrorHander('Reset Password Token is invalid or has expired', 400));
+    if (!user) {
+      return res.status(400).json({ error: 'Reset Password Token is invalid or has expired' });
+    }
+
+  
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-
-  if (req.body.password !== req.body.confirmPassword) {
-    return next(new ErrorHander('Passwords do not match', 400));
-  }
-
-  user.password = req.body.password;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
-  await user.save();
-
-  sendToken(user, 200, res);
-});
-// Get User Detail
-export const getUserDetails = catchAsyncErrors(async (req, res, next) => {
-  // Get user details logic here
-  const user = await User.findById(req.user.id);
-
-  res.status(200).json({
-    success: true,
-    user,
-  });
-});
+};
 
 // Update User password
 export const updatePassword = catchAsyncErrors(async (req, res, next) => {

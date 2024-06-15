@@ -24,7 +24,7 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/logout", isAuthenticatedUser, logoutUser);
 router.post('/password/forgot', forgotPassword);
-router.put('/password/reset/:resetToken', resetPassword);
+router.put('/reset', resetPassword);
 
 // User Profile Routes
 router.route("/profile")

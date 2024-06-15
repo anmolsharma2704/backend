@@ -5,7 +5,7 @@ import fileUpload from 'express-fileupload';
 import path from 'path';
 import errorMiddleware from './middleware/error.js';
 import { config } from 'dotenv';
-
+import cors from 'cors';
 
 export const app = express();
 
@@ -16,8 +16,10 @@ if (process.env.NODE_ENV !== 'PRODUCTION') {
 }
 
 // Using Middlewares
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
+app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(fileUpload());
 
